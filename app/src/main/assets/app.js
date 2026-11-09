@@ -65,9 +65,9 @@
     let currentAppMode = 'live';
 
     const SONIX_SETTINGS_KEY = 'sonix_user_settings_v1';
-    const SONIX_QUALITY_MIGRATION_KEY = 'sonix_quality_migrated_v2';
+    const SONIX_QUALITY_MIGRATION_KEY = 'sonix_quality_migrated_v3';
     const SONIX_DEFAULT_SETTINGS = {
-      quality: 1080,
+      quality: 0,
       qualityExplicitlyChosen: false,
       subtitles: true,
       favoritesFirst: false,
@@ -81,15 +81,14 @@
         const value = {...SONIX_DEFAULT_SETTINGS, ...(saved && typeof saved === 'object' ? saved : {})};
         const migrated = localStorage.getItem(SONIX_QUALITY_MIGRATION_KEY);
         if (!migrated) {
-          if (Number(value.quality) === 720 && !value.qualityExplicitlyChosen) {
-            value.quality = 1080;
-          }
+          // Upgrade only implicit legacy defaults to Auto; keep a quality the customer explicitly selected.
+          if (!value.qualityExplicitlyChosen) value.quality = 0;
           try {
             localStorage.setItem(SONIX_QUALITY_MIGRATION_KEY, 'true');
             localStorage.setItem(SONIX_SETTINGS_KEY, JSON.stringify(value));
           } catch (_) {}
         }
-        value.quality = [480,720,1080].includes(Number(value.quality)) ? Number(value.quality) : 1080;
+        value.quality = [0,480,720,1080].includes(Number(value.quality)) ? Number(value.quality) : 0;
         value.textScale = [90,100,110,120].includes(Number(value.textScale)) ? Number(value.textScale) : 100;
         ['subtitles','favoritesFirst','rememberSection','rememberItem'].forEach(key => value[key] = value[key] !== false);
         return value;
@@ -144,7 +143,7 @@
           window.NativePlayback.isActive() && window.NativePlayback.setVideoQuality) {
         window.NativePlayback.setVideoQuality(Number(value));
         const label = document.getElementById('quality-label');
-        if (label) label.textContent = Number(value) + 'p';
+        if (label) label.textContent = Number(value) === 0 ? 'تلقائي' : Number(value) + 'p';
         document.querySelectorAll('.player-quality-option').forEach(option =>
           option.setAttribute('aria-pressed', String(Number(option.dataset.quality) === Number(value))));
       }
